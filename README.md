@@ -4,8 +4,11 @@ An analysis to the infamous Vawtrak malware
 In the first part i tried static analysis using tools such Peview, and PE explorer with no luck.
 The malware is encrypted with some sort of encryption
 With the usage of Binary  ninja i discovered via the string view i saw that a string got xreferenced 34 times, so its going to be the value used to decrypt the malware
+<img width="394" height="157" alt="image" src="https://github.com/user-attachments/assets/ebc480b1-db8e-4ef6-9139-d265c59ce66f" />
+
 
 By using the hotkey x we can see the crossreferences that uses this value and we see a function promptly called decryption_routine
+<img width="706" height="643" alt="image" src="https://github.com/user-attachments/assets/3167a2c8-b505-4282-8dab-6ef035b654b6" />
 
 Since the developer of the malware used 2 or more wrappers we need to focus on the dynamic analysis, using softwares like x64dbg.
 Since the address found in binary ninja shows the addresses based on the default memory base, we need to overcome the ASLR by subtracting the bae address with the decryption_routine address we found(18010a1c9),getting the value of 10a1c9(relative address).
@@ -13,22 +16,32 @@ Since the address found in binary ninja shows the addresses based on the default
 In the debugger we add to the base address of the executable this offset and we get 7FF99283a1c9. Note the base address may change to each execution in the debugger.
 Trying to get the software and hardware breakpoint to get the code decrypted was a no go, so I pivoted VirtualAlloc by setting a breakpoint to VirtualProtect to get the decrypted malware.
 I found the MZ header in the dump
+<img width="800" height="87" alt="image" src="https://github.com/user-attachments/assets/49cda31e-9b08-4c63-839d-c8d307bced26" />
+
 
 Dumped from .reloc to the exe via command line and got the unencrypted version. 
 This is an example of both encrypted and unencrypted
+<img width="800" height="530" alt="image" src="https://github.com/user-attachments/assets/c60ad640-306a-44e3-9dab-9461541b7bd1" />
+
 
 Moving on, in the strings we see that it uses Nt format functions so it uses Native api in order to evade some Antivirus solutions.
 Let’s go back to Binary Ninja, with the decrypted malware.
 
 We see a function that checks the language of the system
+<img width="800" height="388" alt="image" src="https://github.com/user-attachments/assets/7827c2d9-1ec9-49ca-8960-934db8de9e4d" />
 
 
 And then, after enumerating correctly goes to the true branch, so sub_7ff7f6ded30c, promptly called language_strings_deletion
+<img width="800" height="272" alt="image" src="https://github.com/user-attachments/assets/ad930ca4-5fcd-4608-a769-984aa5b679f1" />
 
 
 In the main of Binary ninja we see a function that parse the commands according to the values:
+<img width="800" height="554" alt="image" src="https://github.com/user-attachments/assets/9b819d92-993b-4b41-ba29-24849d531421" />
+
 
 The first function takes the quoted text and parse its insides if is not a quote:
+<img width="800" height="293" alt="image" src="https://github.com/user-attachments/assets/3d4d8534-9a6a-4182-843e-f0d91c19c032" />
+
 
 The function inside got called alloc_or_copy_token.
 
@@ -37,6 +50,9 @@ Next, under the process command block, there is a mapping of the capabilities of
 With the I is checking the architecture
 
 The F is file operation and checks the next character in order to do the operations
+<img width="800" height="486" alt="image" src="https://github.com/user-attachments/assets/c653e4c7-ab29-495a-abda-cb04fe8226d4" />
+<img width="800" height="544" alt="image" src="https://github.com/user-attachments/assets/613cd451-2ef5-4ef0-88f6-34ed6d41215d" />
+
 
 
 All communication with C&C servers is done via the HTTP protocol. The list of remote C&C servers
